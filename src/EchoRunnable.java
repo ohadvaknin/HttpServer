@@ -92,8 +92,33 @@ class EchoRunnable implements Runnable {
             String clientSentence;
             // Keep reading lines until a blank line is reached, indicating the end of the request headers
             while ((clientSentence = inFromClient.readLine()) != null && !clientSentence.isEmpty()) {
-                requestHeaders.append(clientSentence + "\n");
+                requestHeaders.append(clientSentence).append("\n");
             }
+            
+            int contentLength = 0;
+            for (String header : requestHeaders.toString().split("\n")) {
+                if (header.toLowerCase().startsWith("content-length:")) {
+                    try {
+                        contentLength = Integer.parseInt(header.substring("content-length:".length()).trim());
+                    } catch (NumberFormatException e) {
+                        // Handle malformed Content-Length header
+                    }
+                    break;
+                }
+            }
+            
+            // Now read the body
+            String requestBody = "";
+            if (contentLength > 0) {
+                char[] body = new char[contentLength];
+                int bytesRead = inFromClient.read(body, 0, contentLength);
+                if (bytesRead != contentLength) {
+                    // Handle case where actual bytesRead doesn't match Content-Length header
+                }
+                requestBody = new String(body, 0, bytesRead);
+                // Now you have the request body in requestBody
+            }
+            System.out.println("fermofwernfo:" + requestBody);
             if (requestHeaders.length() > 0) {
                 handleRequest(requestHeaders.toString(), outToClient, inFromClient);
             }
