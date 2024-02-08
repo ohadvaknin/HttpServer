@@ -29,6 +29,7 @@ class EchoRunnable implements Runnable {
     }
     private void handleGETPOST(HTTPRequest req, DataOutputStream outToClient) {
         String requestedPage = req.getRequestedPage();
+        requestedPage = requestedPage.replaceAll("../", "");
         if (requestedPage.equals("/")) {
             requestedPage = defaultPage;
         }

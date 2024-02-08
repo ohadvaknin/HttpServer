@@ -36,6 +36,7 @@ public class HTTPRequest {
         } else {
             this.requestedPage = requestedPageWithParams;
         }
+        
         if (requestBody.length() > 0) parseParams(requestBody);
         // Check if requested page is an image
         this.isImage = requestedPage.matches(".*\\.(jpg|bmp|gif)$");
