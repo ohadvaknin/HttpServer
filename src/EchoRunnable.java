@@ -1,15 +1,15 @@
 import java.io.*;
 import java.net.*;
 
-import javax.xml.crypto.Data;
 class EchoRunnable implements Runnable {
-    private void handleRequest(String requestLine, DataOutputStream outToClient, BufferedReader inFromClient) throws IOException {
-        HTTPRequest req = new HTTPRequest(requestLine, inFromClient);
+    private void handleRequest(String requestLine, String requestBody, DataOutputStream outToClient) throws IOException {
+        HTTPRequest req = new HTTPRequest(requestLine, requestBody);
         System.out.println(requestLine);
+        System.out.println(requestBody);
         if (req.getType().equals("GET")) {
-            handleGET(req, outToClient);
+            handleGETPOST(req, outToClient);
         } else if (req.getType().equals("POST")) {
-            handleGET(req, outToClient);
+            handleGETPOST(req, outToClient);
         } else {
             outToClient.write("HTTP/1.1 501 Not Implemented\r\n\r\n".getBytes());
         }
@@ -27,11 +27,12 @@ class EchoRunnable implements Runnable {
             return "application/octet-stream";
         }
     }
-    private void handleGET(HTTPRequest req, DataOutputStream outToClient) {
+    private void handleGETPOST(HTTPRequest req, DataOutputStream outToClient) {
         String requestedPage = req.getRequestedPage();
         if (requestedPage.equals("/")) {
             requestedPage = defaultPage;
         }
+        System.out.println("PARAMETERS:" + req.getParameters().values());
         requestedPage = this.root + requestedPage.substring(1);
         File file = new File(requestedPage);
         if (file.exists()) {
@@ -62,11 +63,6 @@ class EchoRunnable implements Runnable {
         }
     }
 
-    private String handlePOST(HTTPRequest req, DataOutputStream outToClient) {
-        // You can implement handling logic for POST requests here
-        // For example, processing form data, updating databases, etc.
-        return "HTTP/1.1 501 Not Implemented\r\n\r\n";
-    }
     private Socket clientSocket = null;
     private String root;
     private String defaultPage;
@@ -107,7 +103,6 @@ class EchoRunnable implements Runnable {
                 }
             }
             
-            // Now read the body
             String requestBody = "";
             if (contentLength > 0) {
                 char[] body = new char[contentLength];
@@ -116,11 +111,9 @@ class EchoRunnable implements Runnable {
                     // Handle case where actual bytesRead doesn't match Content-Length header
                 }
                 requestBody = new String(body, 0, bytesRead);
-                // Now you have the request body in requestBody
             }
-            System.out.println("fermofwernfo:" + requestBody);
             if (requestHeaders.length() > 0) {
-                handleRequest(requestHeaders.toString(), outToClient, inFromClient);
+                handleRequest(requestHeaders.toString(), requestBody, outToClient);
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());

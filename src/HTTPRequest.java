@@ -13,7 +13,7 @@ public class HTTPRequest {
     private HashMap<String, String> parameters = new HashMap<>();
 
     
-    public HTTPRequest(String requestHeader, BufferedReader inFromClient) {
+    public HTTPRequest(String requestHeader, String requestBody) {
         // Parse the request header        
         String[] lines = requestHeader.split("\r\n");
         // Extract type and requested page
@@ -36,7 +36,7 @@ public class HTTPRequest {
         } else {
             this.requestedPage = requestedPageWithParams;
         }
-
+        if (requestBody.length() > 0) parseParams(requestBody);
         // Check if requested page is an image
         this.isImage = requestedPage.matches(".*\\.(jpg|bmp|gif)$");
         // Extract content length
@@ -50,22 +50,6 @@ public class HTTPRequest {
             }
         }
 
-        // Extract parameters
-
-        if ("POST".equalsIgnoreCase(this.type)) {
-            try {
-                // Read the POST body based on Content-Length
-                char[] bodyChars = new char[this.contentLength];
-                int bytesRead = inFromClient.read(bodyChars, 0, this.contentLength);
-                if (bytesRead > 0) {
-                    String requestBody = new String(bodyChars);
-                    // Now, you have the POST body in requestBody, ready to parse parameters
-                    parseParams(requestBody); // Parse POST parameters
-                }
-            } catch (IOException e) {
-                System.err.println("Error reading the request body: " + e.getMessage());
-            }
-        }
     }
 
     // Getters
