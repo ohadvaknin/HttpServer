@@ -84,16 +84,18 @@ class EchoRunnable implements Runnable {
 
     @Override
     public void run() {
-        String clientSentence;
+        StringBuilder requestHeaders = new StringBuilder();
         try (
-                BufferedReader inFromClient =
-                        new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 DataOutputStream outToClient = new DataOutputStream(clientSocket.getOutputStream())
         ) {
-            clientSentence = inFromClient.readLine();  //read
-            // System.out.println("Received: " + clientSentence);
-            if (clientSentence != null) {
-                handleRequest(clientSentence, outToClient);
+            String clientSentence;
+            // Keep reading lines until a blank line is reached, indicating the end of the request headers
+            while ((clientSentence = inFromClient.readLine()) != null && !clientSentence.isEmpty()) {
+                requestHeaders.append(clientSentence + "\n");
+            }
+            if (requestHeaders.length() > 0) {
+                handleRequest(requestHeaders.toString(), outToClient);
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());
@@ -105,4 +107,5 @@ class EchoRunnable implements Runnable {
             }
         }
     }
+    
 }

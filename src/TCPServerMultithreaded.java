@@ -3,9 +3,6 @@ import java.net.*;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-
-
 class TCPServerMultithreaded {
     public static void main(String[] argv) throws Exception {
         Properties prop = new Properties();

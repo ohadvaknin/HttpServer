@@ -18,10 +18,21 @@ public class HTTPRequest {
         // Extract type and requested page
         String[] requestLine = lines[0].split(" ");
         this.type = requestLine[0];
-        this.requestedPage = requestLine[1];
-        if (requestedPage.indexOf('?') > -1) {
-            paramsLine = requestedPage.substring(requestedPage.indexOf('?') + 1);
-            requestedPage = requestedPage.substring(0, requestedPage.indexOf('?'));
+        String requestedPageWithParams = requestLine[1];
+        String fragmentIdentifier;
+        // Check for fragment identifier
+        int fragmentIndex = requestedPageWithParams.indexOf('#');
+        if (fragmentIndex != -1) {
+            fragmentIdentifier = requestedPageWithParams.substring(fragmentIndex + 1);
+            requestedPageWithParams = requestedPageWithParams.substring(0, fragmentIndex);
+        }
+
+        // Separate query parameters if present
+        if (requestedPageWithParams.contains("?")) {
+            paramsLine = requestedPageWithParams.substring(requestedPageWithParams.indexOf('?') + 1);
+            requestedPage = requestedPageWithParams.substring(0, requestedPageWithParams.indexOf('?'));
+        } else {
+            this.requestedPage = requestedPageWithParams;
         }
 
         // Check if requested page is an image
@@ -60,7 +71,7 @@ public class HTTPRequest {
         if (this.type.equals("POST")) {
             // Assuming parameters are in the body of the POST request
             String requestBody = lines[lines.length - 1];
-            paramsLine = paramsLine +requestBody;
+            if (requestBody.contains("=")) paramsLine = paramsLine + "&" + requestBody;
         }   
         if (paramsLine.length() > 1) {
             String[] params = paramsLine.split("&");
