@@ -5,11 +5,11 @@ import javax.xml.crypto.Data;
 class EchoRunnable implements Runnable {
     private void handleRequest(String requestLine, DataOutputStream outToClient) throws IOException {
         HTTPRequest req = new HTTPRequest(requestLine);
-        String response;
+        System.out.println(requestLine);
         if (req.getType().equals("GET")) {
             handleGET(req, outToClient);
         } else if (req.getType().equals("POST")) {
-            outToClient.write("hey".getBytes());
+            handlePOST(req, outToClient);
         } else {
             outToClient.write("HTTP/1.1 501 Not Implemented\r\n\r\n".getBytes());
         }
@@ -62,7 +62,7 @@ class EchoRunnable implements Runnable {
         }
     }
 
-    private String handlePOST(HTTPRequest req) {
+    private String handlePOST(HTTPRequest req, DataOutputStream outToClient) {
         // You can implement handling logic for POST requests here
         // For example, processing form data, updating databases, etc.
         return "HTTP/1.1 501 Not Implemented\r\n\r\n";

@@ -14,11 +14,15 @@ public class HTTPRequest {
         // Assuming requestHeader format: "GET /index.html HTTP/1.1\r\nContent-Length: 100\r\nReferer: example.com\r\nUser-Agent: Mozilla\r\n\r\n"
 
         String[] lines = requestHeader.split("\r\n");
-
+        String paramsLine = "";
         // Extract type and requested page
         String[] requestLine = lines[0].split(" ");
         this.type = requestLine[0];
         this.requestedPage = requestLine[1];
+        if (requestedPage.indexOf('?') > -1) {
+            paramsLine = requestedPage.substring(requestedPage.indexOf('?') + 1);
+            requestedPage = requestedPage.substring(0, requestedPage.indexOf('?'));
+        }
 
         // Check if requested page is an image
         if (this.requestedPage.endsWith(".jpg") || this.requestedPage.endsWith(".bmp") || this.requestedPage.endsWith(".gif")) {
@@ -56,12 +60,16 @@ public class HTTPRequest {
         if (this.type.equals("POST")) {
             // Assuming parameters are in the body of the POST request
             String requestBody = lines[lines.length - 1];
-            String[] params = requestBody.split("&");
+            paramsLine = paramsLine +requestBody;
+        }   
+        if (paramsLine.length() > 1) {
+            String[] params = paramsLine.split("&");
             for (String param : params) {
                 String[] keyValue = param.split("=");
                 this.parameters.put(keyValue[0], keyValue[1]);
             }
         }
+        
     }
 
     // Getters
