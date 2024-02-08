@@ -3,13 +3,13 @@ import java.net.*;
 
 import javax.xml.crypto.Data;
 class EchoRunnable implements Runnable {
-    private void handleRequest(String requestLine, DataOutputStream outToClient) throws IOException {
-        HTTPRequest req = new HTTPRequest(requestLine);
+    private void handleRequest(String requestLine, DataOutputStream outToClient, BufferedReader inFromClient) throws IOException {
+        HTTPRequest req = new HTTPRequest(requestLine, inFromClient);
         System.out.println(requestLine);
         if (req.getType().equals("GET")) {
             handleGET(req, outToClient);
         } else if (req.getType().equals("POST")) {
-            handlePOST(req, outToClient);
+            handleGET(req, outToClient);
         } else {
             outToClient.write("HTTP/1.1 501 Not Implemented\r\n\r\n".getBytes());
         }
@@ -95,7 +95,7 @@ class EchoRunnable implements Runnable {
                 requestHeaders.append(clientSentence + "\n");
             }
             if (requestHeaders.length() > 0) {
-                handleRequest(requestHeaders.toString(), outToClient);
+                handleRequest(requestHeaders.toString(), outToClient, inFromClient);
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());

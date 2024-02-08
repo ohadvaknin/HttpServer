@@ -1,86 +1,71 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.HashMap;
 
 public class HTTPRequest {
     private String type;
     private String requestedPage;
     private boolean isImage;
-    private int contentLength;
+    private int contentLength = 0; // Default to 0
     private String referer;
     private String userAgent;
-    private HashMap<String, String> parameters;
+    private HashMap<String, String> parameters = new HashMap<>();
 
-    public HTTPRequest(String requestHeader) {
-        // Parse the request header
-        // Assuming requestHeader format: "GET /index.html HTTP/1.1\r\nContent-Length: 100\r\nReferer: example.com\r\nUser-Agent: Mozilla\r\n\r\n"
-
+    
+    public HTTPRequest(String requestHeader, BufferedReader inFromClient) {
+        // Parse the request header        
         String[] lines = requestHeader.split("\r\n");
-        String paramsLine = "";
         // Extract type and requested page
         String[] requestLine = lines[0].split(" ");
         this.type = requestLine[0];
         String requestedPageWithParams = requestLine[1];
-        String fragmentIdentifier;
         // Check for fragment identifier
         int fragmentIndex = requestedPageWithParams.indexOf('#');
         if (fragmentIndex != -1) {
-            fragmentIdentifier = requestedPageWithParams.substring(fragmentIndex + 1);
+            // If there is a fragment, simply ignore it for server-side processing
             requestedPageWithParams = requestedPageWithParams.substring(0, fragmentIndex);
         }
 
         // Separate query parameters if present
-        if (requestedPageWithParams.contains("?")) {
-            paramsLine = requestedPageWithParams.substring(requestedPageWithParams.indexOf('?') + 1);
-            requestedPage = requestedPageWithParams.substring(0, requestedPageWithParams.indexOf('?'));
+        int paramStart = requestedPageWithParams.indexOf('?');
+        if (paramStart != -1) {
+            this.requestedPage = requestedPageWithParams.substring(0, paramStart);
+            String paramsLine = requestedPageWithParams.substring(paramStart + 1);
+            parseParams(paramsLine); // Parse GET parameters
         } else {
             this.requestedPage = requestedPageWithParams;
         }
 
         // Check if requested page is an image
-        if (this.requestedPage.endsWith(".jpg") || this.requestedPage.endsWith(".bmp") || this.requestedPage.endsWith(".gif")) {
-            this.isImage = true;
-        } else {
-            this.isImage = false;
-        }
-
+        this.isImage = requestedPage.matches(".*\\.(jpg|bmp|gif)$");
         // Extract content length
         for (String line : lines) {
-            if (line.startsWith("Content-Length:")) {
-                this.contentLength = Integer.parseInt(line.split(": ")[1]);
-                break;
-            }
-        }
-
-        // Extract referer
-        for (String line : lines) {
-            if (line.startsWith("Referer:")) {
-                this.referer = line.split(": ")[1];
-                break;
-            }
-        }
-
-        // Extract user agent
-        for (String line : lines) {
-            if (line.startsWith("User-Agent:")) {
-                this.userAgent = line.split(": ")[1];
-                break;
+            if (line.startsWith("Content-Length: ")) {
+                this.contentLength = Integer.parseInt(line.substring("Content-Length: ".length()));
+            } else if (line.startsWith("Referer: ")) {
+                this.referer = line.substring("Referer: ".length());
+            } else if (line.startsWith("User-Agent: ")) {
+                this.userAgent = line.substring("User-Agent: ".length());
             }
         }
 
         // Extract parameters
-        this.parameters = new HashMap<>();
-        if (this.type.equals("POST")) {
-            // Assuming parameters are in the body of the POST request
-            String requestBody = lines[lines.length - 1];
-            if (requestBody.contains("=")) paramsLine = paramsLine + "&" + requestBody;
-        }   
-        if (paramsLine.length() > 1) {
-            String[] params = paramsLine.split("&");
-            for (String param : params) {
-                String[] keyValue = param.split("=");
-                this.parameters.put(keyValue[0], keyValue[1]);
+
+        if ("POST".equalsIgnoreCase(this.type)) {
+            try {
+                // Read the POST body based on Content-Length
+                char[] bodyChars = new char[this.contentLength];
+                int bytesRead = inFromClient.read(bodyChars, 0, this.contentLength);
+                if (bytesRead > 0) {
+                    String requestBody = new String(bodyChars);
+                    // Now, you have the POST body in requestBody, ready to parse parameters
+                    parseParams(requestBody); // Parse POST parameters
+                }
+            } catch (IOException e) {
+                System.err.println("Error reading the request body: " + e.getMessage());
             }
         }
-        
     }
 
     // Getters
@@ -111,15 +96,22 @@ public class HTTPRequest {
     public HashMap<String, String> getParameters() {
         return parameters;
     }
+    private void parseParams(String paramsLine) {
+        String[] params = paramsLine.split("&");
+        for (String param : params) {
+            String[] keyValue = param.split("=", 2);
+            if (keyValue.length == 2) {
+                try {
+                    String key = URLDecoder.decode(keyValue[0], "UTF-8");
+                    String value = URLDecoder.decode(keyValue[1], "UTF-8");
+                    this.parameters.put(key, value);
+                } catch (Exception e) {
+                    System.err.println("Error decoding parameter: " + e.getMessage());
+                }
+            }
+        }
+    }
 
     public static void main(String[] args) {
-        String requestHeader = "GET /index.html HTTP/1.1\r\nContent-Length: 100\r\nReferer: example.com\r\nUser-Agent: Mozilla\r\n\r\n";
-        HTTPRequest httpRequest = new HTTPRequest(requestHeader);
-        System.out.println("Type: " + httpRequest.getType());
-        System.out.println("Requested Page: " + httpRequest.getRequestedPage());
-        System.out.println("Is Image: " + httpRequest.isImage());
-        System.out.println("Content Length: " + httpRequest.getContentLength());
-        System.out.println("Referer: " + httpRequest.getReferer());
-        System.out.println("User Agent: " + httpRequest.getUserAgent());
     }
 }
