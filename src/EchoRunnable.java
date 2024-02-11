@@ -4,6 +4,10 @@ import java.net.*;
 class EchoRunnable implements Runnable {
     private void handleRequest(String requestLine, String requestBody, DataOutputStream outToClient) throws IOException {
         HTTPRequest req = new HTTPRequest(requestLine, requestBody);
+        if (req.getBadRequest()) {
+            outToClient.write("HTTP/1.1 400 Bad Request\r\n\r\n".getBytes());
+            return;
+        }
         System.out.println(requestLine);
         System.out.println(requestBody);
         if (req.getType().equals("GET") || req.getType().equals("POST") || req.getType().equals("HEAD")) {
@@ -100,7 +104,7 @@ class EchoRunnable implements Runnable {
             String clientSentence;
             // Keep reading lines until a blank line is reached, indicating the end of the request headers
             while ((clientSentence = inFromClient.readLine()) != null && !clientSentence.isEmpty()) {
-                requestHeaders.append(clientSentence).append("\n");
+                requestHeaders.append(clientSentence).append("\r\n");
             }
             
             int contentLength = 0;
