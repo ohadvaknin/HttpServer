@@ -6,10 +6,10 @@ class EchoRunnable implements Runnable {
         HTTPRequest req = new HTTPRequest(requestLine, requestBody);
         System.out.println(requestLine);
         System.out.println(requestBody);
-        if (req.getType().equals("GET")) {
-            handleGETPOST(req, outToClient);
-        } else if (req.getType().equals("POST")) {
-            handleGETPOST(req, outToClient);
+        if (req.getType().equals("GET") || req.getType().equals("POST") || req.getType().equals("HEAD")) {
+            handleGETPOSTHEAD(req, outToClient);
+        }  else if (req.getType().equals("TRACE")) {
+            handleTRACE(req, outToClient);
         } else {
             outToClient.write("HTTP/1.1 501 Not Implemented\r\n\r\n".getBytes());
         }
@@ -27,7 +27,7 @@ class EchoRunnable implements Runnable {
             return "application/octet-stream";
         }
     }
-    private void handleGETPOST(HTTPRequest req, DataOutputStream outToClient) {
+    private void handleGETPOSTHEAD(HTTPRequest req, DataOutputStream outToClient) {
         String requestedPage = req.getRequestedPage();
         requestedPage = requestedPage.replaceAll("../", "");
         if (requestedPage.equals("/")) {
@@ -47,7 +47,7 @@ class EchoRunnable implements Runnable {
                     outToClient.write(("Content-Type: " + contentType + "\r\n").getBytes());
                     outToClient.write(("Content-Length: " + contentLength + "\r\n").getBytes());
                     outToClient.write("\r\n".getBytes()); // Empty line to separate headers from content
-                    outToClient.write(fileContent); // Append file content
+                    if (!req.getType().equals("HEAD")) outToClient.write(fileContent); // Append file content
                 } else {
                     outToClient.write("HTTP/1.1 500 Internal Server Error\r\n\r\n".getBytes());
                 }
@@ -61,6 +61,17 @@ class EchoRunnable implements Runnable {
             catch (IOException e) {
             }
 
+        }
+    }
+    private void handleTRACE(HTTPRequest req, DataOutputStream outToClient) {
+        try {
+            String requestHeaders = "HTTP/1.1 200 OK\r\nContent-Type: message/http\r\n\r\n" + req.toString();
+            outToClient.write(requestHeaders.getBytes());
+        } catch (IOException e) {
+            try {
+                outToClient.write("HTTP/1.1 500 Internal Server Error\r\n\r\n".getBytes());
+            } catch (IOException ignored) {
+            }
         }
     }
 
