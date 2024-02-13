@@ -9,6 +9,7 @@ public class HTTPRequest {
     private String referer;
     private String userAgent;
     private boolean badRequest;
+    private boolean chunked;
     private HashMap<String, String> parameters = new HashMap<>();
 
     private boolean isBadRequest(String requestHeader, String requestBody) {
@@ -82,6 +83,7 @@ public class HTTPRequest {
         // Check if requested page is an image
         this.isImage = requestedPage.matches(".*\\.(jpg|bmp|gif|png)$");
         // Extract content length
+        chunked = false;
         for (String line : lines) {
             if (line.startsWith("Content-Length: ")) {
                 this.contentLength = Integer.parseInt(line.substring("Content-Length: ".length()));
@@ -89,6 +91,8 @@ public class HTTPRequest {
                 this.referer = line.substring("Referer: ".length());
             } else if (line.startsWith("User-Agent: ")) {
                 this.userAgent = line.substring("User-Agent: ".length());
+            } else if (line.toLowerCase().startsWith("chunked: ")) { // Case-insensitive match
+                chunked = "yes".equalsIgnoreCase(line.substring("Chunked: ".length()));
             }
         }
 
@@ -120,6 +124,9 @@ public class HTTPRequest {
     }
     public boolean getBadRequest() {
         return badRequest;
+    }
+    public boolean getChunked() {
+        return chunked;
     }
 
     public HashMap<String, String> getParameters() {

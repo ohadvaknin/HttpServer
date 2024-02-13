@@ -43,30 +43,50 @@ class EchoRunnable implements Runnable {
         if (file.exists()) {
             try (FileInputStream fileInputStream = new FileInputStream(file)) {
                 String contentType = getContentType(requestedPage);
-                long contentLength = file.length();
-                byte[] fileContent = new byte[(int) contentLength];
-                int bytesRead = fileInputStream.read(fileContent);
-                if (bytesRead == contentLength) {
-                    outToClient.write("HTTP/1.1 200 OK\r\n".getBytes());
-                    outToClient.write(("Content-Type: " + contentType + "\r\n").getBytes());
-                    outToClient.write(("Content-Length: " + contentLength + "\r\n").getBytes());
-                    outToClient.write("\r\n".getBytes()); // Empty line to separate headers from content
-                    if (!req.getType().equals("HEAD")) outToClient.write(fileContent); // Append file content
+                outToClient.write("HTTP/1.1 200 OK\r\n".getBytes());
+                outToClient.write(("Content-Type: " + contentType + "\r\n").getBytes());
+                if (req.getChunked()) {
+                    // Start sending chunked data
+                    outToClient.write("Transfer-Encoding: chunked\r\n\r\n".getBytes());
+                    if (!req.getType().equals("HEAD")) {
+                        final int CHUNK_SIZE = 1024; // Define chunk size
+                        byte[] buffer = new byte[CHUNK_SIZE];
+                        int bytesRead;
+                        while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                            String hexLength = Integer.toHexString(bytesRead) + "\r\n";
+                            outToClient.write(hexLength.getBytes());
+                            outToClient.write(buffer, 0, bytesRead);
+                            outToClient.write("\r\n".getBytes());
+                        }
+                        outToClient.write("0\r\n\r\n".getBytes()); // Signal end of chunked data
+                    }
                 } else {
-                    outToClient.write("HTTP/1.1 500 Internal Server Error\r\n\r\n".getBytes());
+                    // For non-chunked responses
+                    long contentLength = file.length();
+                    byte[] fileContent = new byte[(int) contentLength];
+                    int bytesRead = fileInputStream.read(fileContent);
+                    outToClient.write(("Content-Length: " + contentLength + "\r\n\r\n").getBytes());
+                    if (!req.getType().equals("HEAD")) {
+                        outToClient.write(fileContent);
+                    }
                 }
             } catch (IOException e) {
+                try {
+                    outToClient.write("HTTP/1.1 500 Internal Server Error\r\n\r\n".getBytes());
+                } catch (IOException ioException) {
+                    // Handle potential IOException from writing the error response
+                }
             }
-        } 
-        else {
+        } else {
             try {
-            outToClient.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+                outToClient.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+            } catch (IOException e) {
+                // Handle potential IOException from writing the 404 response
             }
-            catch (IOException e) {
-            }
-
         }
     }
+    
+    
     private void handleTRACE(HTTPRequest req, DataOutputStream outToClient) {
         try {
             String requestHeaders = "HTTP/1.1 200 OK\r\nContent-Type: message/http\r\n\r\n" + req.toString();
